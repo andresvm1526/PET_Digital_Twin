@@ -6,7 +6,7 @@ La cadena integrada es:
 
 `data/input_pet.json → SimPy → results/ → FastAPI → contracts/ → Unity`
 
-Para dejarlo operativo de una vez, doble clic en `deploy.bat` (o `pet-deploy` en terminal); los detalles están en la sección DESPLIEGUE AUTOMÁTICO.
+Para dejarlo operativo de una vez después de descargar/clonar, doble clic en `deploy.bat`. El script crea `.venv`, instala dependencias, ejecuta la simulación si hace falta, arranca la API y abre el dashboard. Los detalles están en la sección DESPLIEGUE AUTOMÁTICO.
 
 Los únicos IDs de equipo válidos son `D-101`, `H-101`, `IMM-101`, `CV-101`, `BF-101`, `OV-101`, `SBM-101`, `QC-101` y `PKG-101`. Todos los tiempos internos y publicados están en segundos; temperatura en °C; presión en bar; masa interna en kg; `progress` es una fracción de 0 a 1 y los porcentajes KPI van de 0 a 100.
 
@@ -80,7 +80,7 @@ La semilla `random_seed` hace reproducible la corrida. `numero_maquinas_inyeccio
 
 ## DESPLIEGUE AUTOMÁTICO
 
-Un solo comando deja operativo el sistema completo: comprueba dependencias, ejecuta la simulación si `results/` falta o es anterior al input, arranca la API, abre el navegador y reporta el estado del visor WebGL.
+Un solo comando deja operativo el sistema completo: crea `.venv` si no existe, instala dependencias, ejecuta la simulación si `results/` falta o es anterior al input, arranca la API, abre el navegador y reporta el estado del visor WebGL.
 
 Doble clic en Windows:
 

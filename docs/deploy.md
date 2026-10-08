@@ -16,6 +16,8 @@ data/input_pet.json  →  SimPy  →  results/  →  FastAPI  →  contracts/  �
 deploy.bat
 ```
 
+En un clon nuevo, `deploy.bat` crea `.venv` automáticamente e instala las dependencias con `pip install -e .` antes de arrancar el sistema.
+
 Equivalente desde la terminal, tras `python -m pip install -e ".[test]"`:
 
 ```powershell
@@ -24,7 +26,7 @@ pet-deploy
 
 El lanzador:
 
-1. Comprueba `simpy`, `fastapi` y `uvicorn`, y avisa si falta el dashboard.
+1. Comprueba `simpy`, `fastapi` y `uvicorn`; desde `deploy.bat` se instalan automáticamente si faltan.
 2. Ejecuta la simulación **solo** si falta algún archivo de `results/` o si es anterior a `data/input_pet.json`.
 3. Si el puerto ya lo ocupa una API propia, la reutiliza; si lo ocupa otro proceso, lo indica con su PID y sugiere otro puerto.
 4. Arranca Uvicorn, espera a que `/dashboard` responda, abre el navegador y reporta API, resultados y visor WebGL.

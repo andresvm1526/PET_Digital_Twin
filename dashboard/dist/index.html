@@ -1,0 +1,1027 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Panel operativo y configuración del gemelo digital PET">
+  <title>PET Digital Twin · Control de planta</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #081018;
+      --panel: #101b26;
+      --panel-2: #152332;
+      --line: #263747;
+      --text: #eef6fb;
+      --muted: #93a8b8;
+      --cyan: #21c5d9;
+      --green: #22c55e;
+      --amber: #f5b82e;
+      --orange: #f97316;
+      --red: #ef4444;
+      --blue: #3b82f6;
+      --idle: #708090;
+      --shadow: 0 18px 50px rgba(0, 0, 0, .25);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 8% 0%, rgba(33, 197, 217, .12), transparent 28rem),
+        linear-gradient(180deg, #09131d 0%, var(--bg) 45%);
+      color: var(--text);
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .shell { width: min(1500px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0 56px; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 18px 22px;
+      border: 1px solid var(--line);
+      background: rgba(12, 24, 35, .88);
+      backdrop-filter: blur(18px);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 12px;
+      z-index: 20;
+    }
+
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-mark {
+      width: 46px;
+      height: 46px;
+      border-radius: 13px;
+      display: grid;
+      place-items: center;
+      color: #041015;
+      font-weight: 900;
+      letter-spacing: -.05em;
+      background: linear-gradient(145deg, #60e5f2, #17a7bc);
+      box-shadow: 0 0 30px rgba(33, 197, 217, .22);
+    }
+    h1 { margin: 0; font-size: clamp(1.08rem, 2vw, 1.42rem); letter-spacing: -.02em; }
+    .brand p { margin: 3px 0 0; color: var(--muted); font-size: .82rem; }
+    .connection { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .84rem; }
+    .connection-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 14px currentColor; }
+    .connection.online .connection-dot { background: var(--green); }
+    .connection.offline .connection-dot { background: var(--red); }
+
+    .layout { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(330px, .85fr); gap: 20px; margin-top: 20px; }
+    .main, .sidebar { min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+    .panel {
+      border: 1px solid var(--line);
+      background: linear-gradient(165deg, rgba(19, 33, 46, .97), rgba(12, 24, 35, .97));
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .panel-head { padding: 18px 20px 0; display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+    .panel-head h2 { margin: 0; font-size: 1rem; letter-spacing: -.01em; }
+    .panel-head p { margin: 5px 0 0; color: var(--muted); font-size: .78rem; }
+    .panel-body { padding: 18px 20px 20px; }
+
+    .status-strip {
+      display: grid;
+      grid-template-columns: minmax(190px, 1.3fr) repeat(3, minmax(110px, .7fr));
+      gap: 12px;
+    }
+    .status-cell {
+      min-height: 92px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      background: rgba(6, 15, 23, .55);
+      border-radius: 14px;
+    }
+    .status-cell span, .kpi-label { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; }
+    .status-value { display: block; margin-top: 10px; font-size: 1.5rem; font-weight: 750; letter-spacing: -.03em; }
+    .state-pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: 999px; font-size: .78rem; font-weight: 750; background: rgba(112, 128, 144, .16); color: #cad4dc; }
+    .state-pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 12px currentColor; }
+    .state-pill.RUNNING { color: #5ee886; background: rgba(34, 197, 94, .12); }
+    .state-pill.FINISHED { color: #78adff; background: rgba(59, 130, 246, .12); }
+    .state-pill.PAUSED, .state-pill.WAITING { color: #ffd067; background: rgba(245, 184, 46, .12); }
+    .state-pill.ERROR, .state-pill.FAULT { color: #ff8181; background: rgba(239, 68, 68, .12); }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .kpi-card { padding: 16px; min-height: 122px; border: 1px solid var(--line); background: rgba(7, 17, 26, .56); border-radius: 14px; }
+    .kpi-value { margin-top: 13px; font-size: clamp(1.35rem, 3vw, 2rem); font-weight: 760; letter-spacing: -.045em; }
+    .kpi-note { margin-top: 7px; color: var(--muted); font-size: .75rem; }
+    .kpi-card.accent { background: linear-gradient(145deg, rgba(33, 197, 217, .15), rgba(7, 17, 26, .7)); }
+
+    .analysis-grid { display: grid; grid-template-columns: 1.35fr .65fr; gap: 14px; }
+    .chart-box, .gauge-box { border: 1px solid var(--line); background: rgba(7, 17, 26, .52); border-radius: 14px; padding: 15px; min-height: 230px; }
+    .chart-title { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+    .chart-title strong { font-size: .86rem; }
+    .chart-title span { color: var(--muted); font-size: .72rem; }
+    #trendChart { width: 100%; height: 175px; overflow: visible; }
+    .gauge-wrap { display: grid; place-items: center; min-height: 155px; }
+    .gauge {
+      --value: 0;
+      width: 132px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: conic-gradient(var(--cyan) calc(var(--value) * 1%), #263747 0);
+      position: relative;
+    }
+    .gauge::after { content: ""; position: absolute; inset: 14px; background: #0d1924; border-radius: 50%; }
+    .gauge-value { position: relative; z-index: 1; text-align: center; font-size: 1.45rem; font-weight: 760; }
+    .gauge-value small { display: block; font-size: .62rem; color: var(--muted); font-weight: 600; margin-top: 2px; }
+    .bottleneck { margin-top: 8px; text-align: center; color: var(--muted); font-size: .76rem; line-height: 1.45; }
+
+    .machine-list { display: grid; gap: 9px; }
+    .machine-row {
+      display: grid;
+      grid-template-columns: 82px 1fr 104px 90px 68px 68px;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 12px;
+      border: 1px solid transparent;
+      border-bottom-color: var(--line);
+      font-size: .78rem;
+    }
+    .machine-row:last-child { border-bottom-color: transparent; }
+    .machine-id { font-weight: 780; color: #dff9fc; }
+    .machine-type { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .metric-bar { height: 7px; background: #243443; border-radius: 999px; overflow: hidden; margin-top: 5px; }
+    .metric-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #149aae, var(--cyan)); }
+    .machine-number { text-align: right; color: #cbd8e1; font-variant-numeric: tabular-nums; }
+    .machine-head { color: var(--muted); text-transform: uppercase; letter-spacing: .07em; font-size: .64rem; padding-top: 0; }
+
+    .rejections { display: grid; gap: 12px; }
+    .rejection-row { display: grid; grid-template-columns: 105px 1fr 38px; align-items: center; gap: 12px; font-size: .78rem; }
+    .rejection-track { height: 9px; border-radius: 999px; background: #263747; overflow: hidden; }
+    .rejection-fill { height: 100%; min-width: 0; background: linear-gradient(90deg, #b83333, var(--red)); border-radius: inherit; }
+
+    .form-panel { position: sticky; top: 104px; }
+    .form-scroll { max-height: calc(100vh - 205px); overflow: auto; scrollbar-color: #33495d transparent; }
+    fieldset { border: 0; padding: 0; margin: 0 0 22px; }
+    legend { font-size: .78rem; font-weight: 760; color: #d9e7ef; margin-bottom: 12px; }
+    .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .field.full { grid-column: 1 / -1; }
+    label { display: grid; gap: 6px; color: var(--muted); font-size: .7rem; }
+    label span { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    input {
+      width: 100%;
+      border: 1px solid #314557;
+      border-radius: 10px;
+      background: #09151f;
+      color: var(--text);
+      padding: 10px 11px;
+      outline: none;
+      font-variant-numeric: tabular-nums;
+    }
+    input:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(33, 197, 217, .13); }
+    .derived { padding: 10px 11px; border-radius: 10px; background: rgba(33, 197, 217, .08); border: 1px solid rgba(33, 197, 217, .22); color: #bceff4; font-size: .74rem; line-height: 1.45; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; position: sticky; bottom: -1px; background: linear-gradient(180deg, transparent, #0e1a25 20%); padding-top: 20px; }
+    .button { border: 1px solid #33495b; border-radius: 11px; padding: 10px 12px; color: var(--text); background: #182938; font-weight: 700; font-size: .76rem; }
+    .button:hover { border-color: #4a657a; transform: translateY(-1px); }
+    .button.primary { grid-column: 1 / -1; background: linear-gradient(135deg, #1ab5ca, #15869a); color: #031216; border-color: #2ac7db; }
+    .button.danger { color: #ffb0b0; }
+    .form-message { min-height: 20px; margin-top: 10px; color: var(--muted); font-size: .72rem; }
+    .form-message.success { color: #63e98d; }
+    .form-message.error { color: #ff8c8c; }
+
+    details { border-top: 1px solid var(--line); }
+    summary { cursor: pointer; color: var(--muted); padding: 14px 20px; font-size: .72rem; }
+    .source-note { padding: 0 20px 18px; color: var(--muted); font-size: .7rem; line-height: 1.55; }
+    code { color: #bfeff4; }
+
+    .toast { position: fixed; right: 22px; bottom: 22px; max-width: 360px; padding: 13px 16px; border: 1px solid var(--line); border-radius: 12px; background: #122230; color: var(--text); box-shadow: var(--shadow); opacity: 0; transform: translateY(12px); pointer-events: none; transition: .2s ease; z-index: 50; font-size: .78rem; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ── Vinculación con Unity ─────────────────────────────────── */
+    .unity-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .link-cell {
+      display: flex; flex-direction: column; gap: 7px; min-height: 100px;
+      padding: 14px 15px; border: 1px solid var(--line);
+      background: rgba(6, 15, 23, .55); border-radius: 14px;
+    }
+    .link-label { color: var(--muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; }
+    .link-value { display: flex; align-items: center; gap: 8px; font-size: .95rem; font-weight: 760; letter-spacing: -.02em; color: #dbe7ef; }
+    .link-value::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: .45; }
+    .link-value.ok { color: #5ee886; }
+    .link-value.warn { color: #ffd067; }
+    .link-value.bad { color: #ff8181; }
+    .link-value.info { color: #8fd8ff; }
+    .link-value.ok::before, .link-value.bad::before { opacity: 1; box-shadow: 0 0 10px currentColor; }
+    .link-note { color: var(--muted); font-size: .71rem; line-height: 1.45; }
+
+    .unity-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(290px, .75fr); gap: 14px; }
+    .viewer-box {
+      display: flex; flex-direction: column; min-height: 430px;
+      border: 1px solid var(--line); background: rgba(7, 17, 26, .52);
+      border-radius: 14px; overflow: hidden;
+    }
+    .viewer-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 11px 14px; border-bottom: 1px solid var(--line); background: rgba(12, 24, 35, .72);
+    }
+    .viewer-bar strong { font-size: .84rem; }
+    .viewer-actions { display: flex; gap: 8px; }
+    .mini-button {
+      border: 1px solid #33495b; border-radius: 9px; padding: 7px 11px;
+      background: #182938; color: var(--text); font-size: .7rem; font-weight: 720;
+    }
+    .mini-button:hover { border-color: #4a657a; }
+    .mini-button.danger-mini { color: #ffb0b0; }
+    .viewer-stage { position: relative; flex: 1; min-height: 370px; background: #050b11; }
+    #unityViewer { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #050b11; }
+    #unityViewer[hidden] { display: none; }
+    .viewer-fallback {
+      position: absolute; inset: 0; display: grid; place-content: center; gap: 10px;
+      padding: 26px; text-align: center; color: var(--muted); font-size: .79rem; line-height: 1.6;
+    }
+    .viewer-fallback[hidden] { display: none; }
+    .viewer-fallback strong { color: #dbe7ef; font-size: .92rem; }
+
+    .unity-side { display: flex; flex-direction: column; gap: 12px; }
+    .diag-card { padding: 14px 15px; border: 1px solid var(--line); background: rgba(7, 17, 26, .52); border-radius: 14px; }
+    .diag-card h3 { margin: 0 0 10px; font-size: .76rem; color: #d9e7ef; }
+    .diag-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: .75rem; }
+    .diag-row > span:first-child { color: var(--muted); }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px;
+      border-radius: 999px; font-size: .69rem; font-weight: 760;
+      background: rgba(112, 128, 144, .16); color: #cad4dc;
+    }
+    .chip.ok { color: #5ee886; background: rgba(34, 197, 94, .12); }
+    .chip.warn { color: #ffd067; background: rgba(245, 184, 46, .12); }
+    .chip.bad { color: #ff8181; background: rgba(239, 68, 68, .12); }
+    .chip.info { color: #8fd8ff; background: rgba(59, 130, 246, .12); }
+    .id-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .id-chip {
+      padding: 4px 7px; border: 1px solid var(--line); border-radius: 7px;
+      font-size: .65rem; font-weight: 700; color: var(--muted); background: rgba(6, 15, 23, .5);
+    }
+    .id-chip.ok { color: #8fe6a8; border-color: rgba(34, 197, 94, .35); background: rgba(34, 197, 94, .08); }
+    .id-chip.miss { color: #ff9c9c; border-color: rgba(239, 68, 68, .45); background: rgba(239, 68, 68, .1); }
+    .id-chip.extra { color: #ffd067; border-color: rgba(245, 184, 46, .45); background: rgba(245, 184, 46, .1); }
+    .target-form { display: grid; gap: 10px; }
+    .control-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .unity-side .link-note { margin: 10px 0 0; }
+
+    @media (max-width: 1080px) {
+      .layout { grid-template-columns: 1fr; }
+      .form-panel { position: static; }
+      .form-scroll { max-height: none; }
+      .unity-grid { grid-template-columns: 1fr; }
+      .unity-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 20px, 1500px); padding-top: 10px; }
+      .topbar { top: 6px; padding: 14px; }
+      .brand p, .connection span { display: none; }
+      .status-strip, .kpi-grid, .analysis-grid { grid-template-columns: 1fr 1fr; }
+      .status-strip .status-cell:first-child, .chart-box { grid-column: 1 / -1; }
+      .machine-row { grid-template-columns: 70px 1fr 92px 58px; }
+      .machine-row > :nth-child(5), .machine-row > :nth-child(6) { display: none; }
+      .panel-head, .panel-body { padding-left: 14px; padding-right: 14px; }
+      .viewer-box { min-height: 350px; }
+      .viewer-stage { min-height: 290px; }
+    }
+    @media (max-width: 480px) {
+      .status-strip, .kpi-grid, .analysis-grid, .fields, .unity-strip, .control-grid { grid-template-columns: 1fr; }
+      .field.full, .status-strip .status-cell:first-child, .chart-box { grid-column: auto; }
+      .machine-row { grid-template-columns: 66px 1fr 84px; gap: 8px; }
+      .machine-row > :nth-child(4) { display: none; }
+      .viewer-bar { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">PET</div>
+        <div>
+          <h1>Control de planta · Digital Twin</h1>
+          <p>Operación, desempeño y configuración de proceso</p>
+        </div>
+      </div>
+      <div id="connection" class="connection">
+        <span class="connection-dot"></span>
+        <span id="connectionText">Conectando con FastAPI…</span>
+      </div>
+    </header>
+
+    <div class="layout">
+      <main class="main">
+        <section class="panel" aria-labelledby="unityTitle">
+          <div class="panel-head">
+            <div><h2 id="unityTitle">Vinculación con Unity</h2><p>Plataforma visual: visor 3D, enlace al backend y sincronización con la escena</p></div>
+            <span id="unityOverall" class="chip">Comprobando…</span>
+          </div>
+
+          <div class="panel-body unity-strip">
+            <div class="link-cell">
+              <span class="link-label">Backend compartido</span>
+              <strong id="linkBackend" class="link-value">—</strong>
+              <small id="linkBackendNote" class="link-note">Consultando FastAPI…</small>
+            </div>
+            <div class="link-cell">
+              <span class="link-label">Punto de enlace Unity</span>
+              <strong id="linkTarget" class="link-value">—</strong>
+              <small id="linkTargetNote" class="link-note">—</small>
+            </div>
+            <div class="link-cell">
+              <span class="link-label">Visor 3D Unity</span>
+              <strong id="linkViewer" class="link-value">—</strong>
+              <small id="linkViewerNote" class="link-note">Comprobando build WebGL…</small>
+            </div>
+            <div class="link-cell">
+              <span class="link-label">Sincronización de datos</span>
+              <strong id="linkSync" class="link-value">—</strong>
+              <small id="linkSyncNote" class="link-note">—</small>
+            </div>
+          </div>
+
+          <div class="panel-body unity-grid">
+            <div class="viewer-box">
+              <div class="viewer-bar">
+                <strong>Visor 3D · Unity WebGL</strong>
+                <div class="viewer-actions">
+                  <button id="viewerReload" class="mini-button" type="button">Recargar</button>
+                  <button id="viewerOpen" class="mini-button" type="button">Abrir pestaña</button>
+                </div>
+              </div>
+              <div class="viewer-stage">
+                <iframe id="unityViewer" title="Visor Unity WebGL" allow="fullscreen; autoplay" hidden></iframe>
+                <div id="viewerFallback" class="viewer-fallback">
+                  <strong>Visor WebGL no disponible</strong>
+                  <span id="viewerFallbackText">Comprobando la ruta del visor…</span>
+                  <span>Publica el build de Unity WebGL y ajusta la ruta del visor; la página lo detecta automáticamente y lo incrusta aquí.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="unity-side">
+              <div class="diag-card">
+                <h3>Compatibilidad con la escena de Unity</h3>
+                <div class="diag-row"><span>ID del backend</span><span id="sceneMatch" class="chip">—</span></div>
+                <div id="sceneIds" class="id-chips"></div>
+                <p id="sceneNote" class="link-note">Leyendo estados de máquina…</p>
+              </div>
+
+              <div class="diag-card">
+                <h3>Configuración del enlace</h3>
+                <div class="target-form">
+                  <label><span>Backend que consulta Unity</span><input id="unityTarget" type="text" spellcheck="false" placeholder="http://127.0.0.1:8000"></label>
+                  <label><span>Ruta del visor WebGL</span><input id="unityViewerUrl" type="text" spellcheck="false" placeholder="/unity/index.html"></label>
+                  <button id="unityApply" class="mini-button" type="button">Aplicar enlace</button>
+                </div>
+                <p class="link-note">Valores guardados en este navegador; no modifican el backend.</p>
+              </div>
+
+              <div class="diag-card">
+                <h3>Control de simulación</h3>
+                <div class="control-grid">
+                  <button id="unityStart" class="mini-button" type="button">Iniciar</button>
+                  <button id="unityPause" class="mini-button" type="button">Pausar</button>
+                  <button id="unityReset" class="mini-button danger-mini" type="button">Reiniciar</button>
+                </div>
+                <p class="link-note">Misma API que consume Unity: <code>/status</code>, <code>/machines</code> y <code>/kpis</code>.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="operationTitle">
+          <div class="panel-head">
+            <div><h2 id="operationTitle">Estado de operación</h2><p>Lectura en vivo de la simulación SimPy</p></div>
+            <span id="lastUpdate" class="kpi-note">—</span>
+          </div>
+          <div class="panel-body status-strip">
+            <div class="status-cell"><span>Simulación</span><strong id="simulationState" class="status-value"><span class="state-pill">CARGANDO</span></strong></div>
+            <div class="status-cell"><span>Tiempo simulado</span><strong id="simulationTime" class="status-value">—</strong></div>
+            <div class="status-cell"><span>Producción</span><strong id="completedUnits" class="status-value">—</strong></div>
+            <div class="status-cell"><span>Demanda</span><strong id="demandValue" class="status-value">—</strong></div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="kpiTitle">
+          <div class="panel-head"><div><h2 id="kpiTitle">KPIs de producción</h2><p>Resultados acumulados para la corrida activa</p></div></div>
+          <div class="panel-body kpi-grid">
+            <article class="kpi-card accent" title="Unidades aceptadas después de los rechazos"><div class="kpi-label">Producción buena</div><div id="goodProduction" class="kpi-value">—</div><div id="goodNote" class="kpi-note">—</div></article>
+            <article class="kpi-card" title="Unidades rechazadas dividido por producción total"><div class="kpi-label">Scrap</div><div id="scrapPercent" class="kpi-value">—</div><div id="scrapNote" class="kpi-note">—</div></article>
+            <article class="kpi-card" title="Producción buena por hora simulada"><div class="kpi-label">Throughput</div><div id="throughput" class="kpi-value">—</div><div class="kpi-note">unidades por hora</div></article>
+            <article class="kpi-card"><div class="kpi-label">Lead time promedio</div><div id="leadTime" class="kpi-value">—</div><div class="kpi-note">desde creación hasta terminación</div></article>
+            <article class="kpi-card"><div class="kpi-label">WIP promedio</div><div id="averageWip" class="kpi-value">—</div><div class="kpi-note">unidades en proceso</div></article>
+            <article class="kpi-card"><div class="kpi-label">Tiempo de orden</div><div id="completionTime" class="kpi-value">—</div><div id="scheduleNote" class="kpi-note">—</div></article>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="analysisTitle">
+          <div class="panel-head"><div><h2 id="analysisTitle">Rendimiento y cumplimiento</h2><p>Historia observada durante esta sesión del navegador</p></div></div>
+          <div class="panel-body analysis-grid">
+            <div class="chart-box">
+              <div class="chart-title"><strong>Throughput en vivo</strong><span id="trendRange">Últimas 60 muestras</span></div>
+              <svg id="trendChart" viewBox="0 0 640 175" role="img" aria-label="Tendencia de throughput"></svg>
+            </div>
+            <div class="gauge-box">
+              <div class="chart-title"><strong>Cumplimiento de demanda</strong><span>producción buena / demanda</span></div>
+              <div class="gauge-wrap"><div id="complianceGauge" class="gauge"><div id="complianceValue" class="gauge-value">—<small>cumplimiento</small></div></div></div>
+              <div id="bottleneck" class="bottleneck">Cuello de botella: —</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="machinesTitle">
+          <div class="panel-head"><div><h2 id="machinesTitle">Máquinas</h2><p>Estado, utilización acumulada y flujo de unidades</p></div></div>
+          <div class="panel-body">
+            <div class="machine-list">
+              <div class="machine-row machine-head"><div>ID</div><div>Máquina</div><div>Estado</div><div>Utilización</div><div>Cola</div><div>Prod.</div></div>
+              <div id="machineRows"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="qualityTitle">
+          <div class="panel-head"><div><h2 id="qualityTitle">Rechazos por etapa</h2><p>Distribución de unidades rechazadas</p></div></div>
+          <div class="panel-body rejections" id="rejectionRows"></div>
+          <details>
+            <summary>Fuente y definiciones</summary>
+            <div class="source-note">Datos en vivo desde <code>/status</code>, <code>/machines</code> y <code>/kpis</code>. Throughput = producción buena por hora simulada. Cumplimiento = producción buena / demanda. Utilización y disponibilidad provienen de <code>machine_metrics</code>. La historia del gráfico existe solo durante esta sesión abierta.</div>
+          </details>
+        </section>
+      </main>
+
+      <aside class="sidebar">
+        <section class="panel form-panel" aria-labelledby="configTitle">
+          <div class="panel-head"><div><h2 id="configTitle">Configurar nueva corrida</h2><p>Los cambios se aplican al iniciar la simulación</p></div></div>
+          <form id="configForm" class="panel-body form-scroll">
+            <fieldset>
+              <legend>Planificación y capacidad</legend>
+              <div class="fields">
+                <label><span>Demanda <small>unid.</small></span><input id="demanda" type="number" min="1" step="1" required></label>
+                <label><span>Lote económico <small>unid.</small></span><input id="loteEconomico" type="number" min="1" step="1" required></label>
+                <label><span>Masa por pieza <small>g</small></span><input id="masaPieza" type="number" min="0.1" step="0.1" required></label>
+                <label><span>Capacidad buffer <small>unid.</small></span><input id="capacidadBuffer" type="number" min="1" step="1" required></label>
+                <label><span>Inyectoras</span><input id="maquinasInyeccion" type="number" min="1" step="1" required></label>
+                <label><span>Sopladoras</span><input id="maquinasSoplado" type="number" min="1" step="1" required></label>
+                <div id="dryerCapacity" class="derived field full">Capacidad calculada del secador: —</div>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>Temperaturas y tiempos</legend>
+              <div class="fields">
+                <label><span>Temp. secado <small>°C</small></span><input id="tempSecado" type="number" min="0" step="1" required></label>
+                <label><span>Temp. fusión <small>°C</small></span><input id="tempFusion" type="number" min="0" step="1" required></label>
+                <label class="full"><span>Tiempo secado <small>min</small></span><input id="tiempoSecado" type="number" min="0.1" step="0.1" required></label>
+                <label><span>Inyección mín. <small>s</small></span><input id="inyeccionMin" type="number" min="0.1" step="0.1" required></label>
+                <label><span>Inyección moda <small>s</small></span><input id="inyeccionMode" type="number" min="0.1" step="0.1" required></label>
+                <label><span>Inyección máx. <small>s</small></span><input id="inyeccionMax" type="number" min="0.1" step="0.1" required></label>
+                <label><span>Enfriamiento prom. <small>s</small></span><input id="enfriamientoMean" type="number" min="0.1" step="0.1" required></label>
+                <label><span>Enfriamiento σ <small>s</small></span><input id="enfriamientoStd" type="number" min="0" step="0.1" required></label>
+                <label><span>Recalent. mín. <small>s</small></span><input id="recalentamientoMin" type="number" min="0.1" step="0.1" required></label>
+                <label><span>Recalent. máx. <small>s</small></span><input id="recalentamientoMax" type="number" min="0.1" step="0.1" required></label>
+                <label><span>Soplado mín. <small>s</small></span><input id="sopladoMin" type="number" min="0.1" step="0.1" required></label>
+                <label><span>Soplado moda <small>s</small></span><input id="sopladoMode" type="number" min="0.1" step="0.1" required></label>
+                <label><span>Soplado máx. <small>s</small></span><input id="sopladoMax" type="number" min="0.1" step="0.1" required></label>
+                <label><span>Inspección <small>s</small></span><input id="tiempoInspeccion" type="number" min="0.1" step="0.1" required></label>
+                <label><span>Empaque mín. <small>s</small></span><input id="empaqueMin" type="number" min="0.1" step="0.1" required></label>
+                <label><span>Empaque máx. <small>s</small></span><input id="empaqueMax" type="number" min="0.1" step="0.1" required></label>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>Calidad, turno y confiabilidad</legend>
+              <div class="fields">
+                <label><span>Scrap inyección <small>%</small></span><input id="scrapInyeccion" type="number" min="0" max="100" step="0.1" required></label>
+                <label><span>Scrap soplado <small>%</small></span><input id="scrapSoplado" type="number" min="0" max="100" step="0.1" required></label>
+                <label><span>Scrap calidad <small>%</small></span><input id="scrapCalidad" type="number" min="0" max="100" step="0.1" required></label>
+                <label><span>Horas por turno</span><input id="horasTurno" type="number" min="0.1" step="0.1" required></label>
+                <label><span>Número de turnos</span><input id="numeroTurnos" type="number" min="1" step="1" required></label>
+                <label><span>MTBF <small>h</small></span><input id="mtbf" type="number" min="0" step="0.1" required></label>
+                <label><span>MTTR <small>h</small></span><input id="mttr" type="number" min="0" step="0.01" required></label>
+                <label><span>Semilla aleatoria</span><input id="randomSeed" type="number" min="0" step="1" required></label>
+              </div>
+            </fieldset>
+
+            <div class="actions">
+              <button class="button primary" type="submit">Aplicar parámetros e iniciar</button>
+              <button id="pauseButton" class="button" type="button">Pausar</button>
+              <button id="resumeButton" class="button" type="button">Reanudar</button>
+              <button id="resetButton" class="button danger" type="button">Reiniciar</button>
+              <button id="reloadConfigButton" class="button" type="button">Recargar valores</button>
+            </div>
+            <div id="formMessage" class="form-message" role="status"></div>
+          </form>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script>
+    "use strict";
+
+    const $ = (id) => document.getElementById(id);
+    const stateColors = { IDLE: "#708090", WAITING: "#f5b82e", RUNNING: "#22c55e", FAULT: "#ef4444", MAINTENANCE: "#f97316", FINISHED: "#3b82f6" };
+    const typeLabels = {
+      dryer: "Secador PET", material_hopper: "Tolva", injection_molding: "Inyectora",
+      cooling_conveyor: "Transportador", preform_buffer: "Buffer", reheat_oven: "Horno",
+      stretch_blow_molding: "Sopladora", quality_control: "Inspección", packaging: "Empaque"
+    };
+    let activeConfig = null;
+    let refreshing = false;
+    let throughputHistory = [];
+    let toastTimer = null;
+
+    // IDs exactos del layout fijo declarado en PlantManager.cs (MachineLayout).
+    const UNITY_SCENE_IDS = ["D-101", "H-101", "IMM-101", "CV-101", "BF-101", "OV-101", "SBM-101", "QC-101", "PKG-101"];
+    const unityLink = {
+      target: localStorage.getItem("pet.unityTarget") || "http://127.0.0.1:8000",
+      viewerUrl: localStorage.getItem("pet.unityViewerUrl") || "/unity/index.html",
+      viewerAvailable: false,
+      loadedUrl: "",
+      probing: false,
+      signature: null,
+      changedAt: Date.now()
+    };
+
+    function number(value, digits = 1) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed.toLocaleString("es-BO", { maximumFractionDigits: digits }) : "—";
+    }
+
+    function duration(seconds) {
+      const value = Number(seconds);
+      if (!Number.isFinite(value)) return "—";
+      if (value < 60) return `${number(value, 0)} s`;
+      if (value < 3600) return `${number(value / 60, 1)} min`;
+      return `${number(value / 3600, 2)} h`;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
+    }
+
+    async function requestJson(path, options = {}) {
+      const response = await fetch(path, { headers: { "Content-Type": "application/json", ...(options.headers || {}) }, ...options });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.detail || `Error HTTP ${response.status}`);
+      return payload;
+    }
+
+    function setConnection(online, text) {
+      const element = $("connection");
+      element.className = `connection ${online ? "online" : "offline"}`;
+      $("connectionText").textContent = text;
+    }
+
+    function showToast(message) {
+      const toast = $("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 3200);
+    }
+
+    function setFormMessage(message, kind = "") {
+      const element = $("formMessage");
+      element.textContent = message;
+      element.className = `form-message ${kind}`;
+    }
+
+    function updateStatus(status) {
+      const state = String(status.status || "UNKNOWN").toUpperCase();
+      $("simulationState").innerHTML = `<span class="state-pill ${escapeHtml(state)}">${escapeHtml(state)}</span>`;
+      $("simulationTime").textContent = duration(status.simulation_time);
+      $("completedUnits").textContent = `${number(status.completed_units, 0)} / ${number(status.demand, 0)}`;
+      $("demandValue").textContent = number(status.demand, 0);
+    }
+
+    function updateKpis(kpis) {
+      $("goodProduction").textContent = number(kpis.good_production, 0);
+      $("goodNote").textContent = `${number(kpis.production_total, 0)} procesadas`;
+      $("scrapPercent").textContent = `${number(kpis.scrap_percent, 2)}%`;
+      $("scrapNote").textContent = `${number(kpis.rejected_units, 0)} unidades rechazadas`;
+      $("throughput").textContent = number(kpis.throughput_units_per_hour, 1);
+      $("leadTime").textContent = duration(kpis.average_lead_time_seconds);
+      $("averageWip").textContent = number(kpis.average_wip_units, 1);
+      $("completionTime").textContent = duration(kpis.order_completion_time_seconds);
+      $("scheduleNote").textContent = kpis.completed_within_scheduled_time ? "Dentro del tiempo programado" : "Fuera del tiempo programado";
+
+      const compliance = Math.max(0, Math.min(100, Number(kpis.demand_compliance_percent) || 0));
+      $("complianceGauge").style.setProperty("--value", compliance);
+      $("complianceValue").innerHTML = `${number(compliance, 1)}%<small>cumplimiento</small>`;
+      const bottleneck = kpis.bottleneck || {};
+      $("bottleneck").textContent = `Cuello de botella: ${typeLabels[bottleneck.machine_type] || bottleneck.machine_type || "—"} · ${number(bottleneck.average_utilization_percent, 1)}% utilización`;
+
+      throughputHistory.push(Number(kpis.throughput_units_per_hour) || 0);
+      throughputHistory = throughputHistory.slice(-60);
+      renderTrend();
+      renderRejections(kpis.rejections_by_stage || {});
+      return kpis.machine_metrics || {};
+    }
+
+    function renderTrend() {
+      const svg = $("trendChart");
+      const values = throughputHistory;
+      const width = 640, height = 175, pad = 24;
+      const max = Math.max(1, ...values);
+      const points = values.map((value, index) => {
+        const x = values.length <= 1 ? pad : pad + index * (width - pad * 2) / (values.length - 1);
+        const y = height - pad - (value / max) * (height - pad * 2);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(" ");
+      svg.innerHTML = `
+        <defs><linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#21c5d9" stop-opacity=".28"/><stop offset="1" stop-color="#21c5d9" stop-opacity="0"/></linearGradient></defs>
+        <g stroke="#263747" stroke-width="1">${[0, .25, .5, .75, 1].map(part => `<line x1="${pad}" x2="${width-pad}" y1="${pad + part*(height-pad*2)}" y2="${pad + part*(height-pad*2)}"/>`).join("")}</g>
+        ${points ? `<polyline points="${points} ${width-pad},${height-pad} ${pad},${height-pad}" fill="url(#area)" stroke="none"/><polyline points="${points}" fill="none" stroke="#21c5d9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` : ""}
+        <text x="${pad}" y="16" fill="#93a8b8" font-size="11">${number(max, 0)} u/h</text>
+        <text x="${pad}" y="${height-5}" fill="#93a8b8" font-size="11">0</text>`;
+    }
+
+    function renderRejections(rejections) {
+      const labels = { injection: "Inyección", blow_molding: "Soplado", quality: "Calidad" };
+      const entries = Object.entries(labels).map(([key, label]) => ({ label, value: Number(rejections[key]) || 0 }));
+      const max = Math.max(1, ...entries.map(entry => entry.value));
+      $("rejectionRows").innerHTML = entries.map(entry => `<div class="rejection-row"><span>${entry.label}</span><div class="rejection-track"><div class="rejection-fill" style="width:${entry.value / max * 100}%"></div></div><strong>${number(entry.value, 0)}</strong></div>`).join("");
+    }
+
+    function renderMachines(machines, machineMetrics) {
+      $("machineRows").innerHTML = machines.map(machine => {
+        const metrics = machineMetrics[machine.machine_id] || {};
+        const utilization = Math.max(0, Math.min(100, Number(metrics.utilization_percent) || 0));
+        const state = String(machine.state || "IDLE").toUpperCase();
+        return `<div class="machine-row">
+          <div class="machine-id">${escapeHtml(machine.machine_id)}</div>
+          <div class="machine-type" title="${escapeHtml(typeLabels[machine.machine_type] || machine.machine_type)}">${escapeHtml(typeLabels[machine.machine_type] || machine.machine_type)}</div>
+          <div><span class="state-pill ${escapeHtml(state)}">${escapeHtml(state)}</span></div>
+          <div><span>${number(utilization, 1)}%</span><div class="metric-bar"><span style="width:${utilization}%;background:${stateColors[state] || "#21c5d9"}"></span></div></div>
+          <div class="machine-number">${number(machine.queue, 0)}</div>
+          <div class="machine-number">${number(machine.produced, 0)}</div>
+        </div>`;
+      }).join("");
+    }
+
+    function setLink(id, level, text) {
+      const element = $(id);
+      element.className = `link-value ${level}`;
+      element.textContent = text;
+    }
+
+    function setChip(id, level, text) {
+      const element = $(id);
+      element.className = `chip ${level}`;
+      element.textContent = text;
+    }
+
+    // Comprueba si el build WebGL de Unity publica una página HTML incrustable.
+    // Usa HEAD para no descargar el bundle completo; cae a GET si el servidor no admite HEAD.
+    async function probeViewer() {
+      if (unityLink.probing) return unityLink.viewerAvailable;
+      unityLink.probing = true;
+      try {
+        let response = await fetch(unityLink.viewerUrl, { method: "HEAD", cache: "no-store" });
+        if (response.status === 405) {
+          response = await fetch(unityLink.viewerUrl, { cache: "no-store" });
+          if (response.body && response.body.cancel) {
+            try { await response.body.cancel(); } catch (error) { /* cuerpo descartado */ }
+          }
+        }
+        const contentType = (response.headers.get("content-type") || "").toLowerCase();
+        unityLink.viewerAvailable = response.ok && contentType.includes("text/html");
+      } catch (error) {
+        unityLink.viewerAvailable = false;
+      } finally {
+        unityLink.probing = false;
+      }
+      return unityLink.viewerAvailable;
+    }
+
+    function updateViewerLink() {
+      const frame = $("unityViewer");
+      const fallback = $("viewerFallback");
+      if (unityLink.viewerAvailable) {
+        if (unityLink.loadedUrl !== unityLink.viewerUrl) {
+          unityLink.loadedUrl = unityLink.viewerUrl;
+          frame.src = unityLink.viewerUrl;
+        }
+        frame.hidden = false;
+        fallback.hidden = true;
+        setLink("linkViewer", "ok", "Disponible");
+        $("linkViewerNote").textContent = unityLink.viewerUrl;
+      } else {
+        frame.hidden = true;
+        frame.removeAttribute("src");
+        unityLink.loadedUrl = "";
+        setLink("linkViewer", "bad", "No disponible");
+        $("linkViewerNote").textContent = `${unityLink.viewerUrl} · sin build publicado`;
+        $("viewerFallbackText").textContent = `No se encontró una página HTML en «${unityLink.viewerUrl}».`;
+        fallback.hidden = false;
+      }
+      return unityLink.viewerAvailable;
+    }
+
+    function updateSyncLink(status, machines) {
+      const signature = [
+        status.status,
+        status.simulation_time,
+        status.completed_units,
+        ...machines.map(machine => `${machine.machine_id}:${machine.state}:${machine.produced}:${machine.rejected}:${machine.queue}`)
+      ].join("|");
+      if (unityLink.signature !== signature) {
+        unityLink.signature = signature;
+        unityLink.changedAt = Date.now();
+      }
+
+      const idle = Math.round((Date.now() - unityLink.changedAt) / 1000);
+      const state = String(status.status || "").toUpperCase();
+      if (state === "RUNNING" && idle <= 3) {
+        setLink("linkSync", "ok", "En vivo");
+        $("linkSyncNote").textContent = "El flujo cambia en cada lectura, igual que lo recibe Unity.";
+      } else if (state === "RUNNING") {
+        setLink("linkSync", "warn", `Sin cambios ${idle} s`);
+        $("linkSyncNote").textContent = "El backend responde pero no se observan cambios recientes.";
+      } else if (state === "PAUSED") {
+        setLink("linkSync", "warn", "Simulación en pausa");
+        $("linkSyncNote").textContent = `Último cambio hace ${idle} s.`;
+      } else if (state === "FINISHED") {
+        setLink("linkSync", "info", "Corrida publicada");
+        $("linkSyncNote").textContent = `Resultados fijos desde hace ${idle} s.`;
+      } else if (state === "ERROR") {
+        setLink("linkSync", "bad", "Error de simulación");
+        $("linkSyncNote").textContent = "Revisa la consola de FastAPI.";
+      } else {
+        setLink("linkSync", "info", "En espera");
+        $("linkSyncNote").textContent = "Inicia la simulación para observar el flujo compartido.";
+      }
+    }
+
+    function updateSceneLink(machines) {
+      const present = new Set(machines.map(machine => machine.machine_id));
+      const missing = UNITY_SCENE_IDS.filter(id => !present.has(id));
+      const extras = [...present].filter(id => !UNITY_SCENE_IDS.includes(id)).sort();
+
+      $("sceneIds").innerHTML =
+        UNITY_SCENE_IDS
+          .map(id => `<span class="id-chip ${present.has(id) ? "ok" : "miss"}">${escapeHtml(id)}</span>`)
+          .join("") +
+        extras.map(id => `<span class="id-chip extra">${escapeHtml(id)}</span>`).join("");
+
+      if (!missing.length && !extras.length) {
+        setChip("sceneMatch", "ok", `${UNITY_SCENE_IDS.length}/${UNITY_SCENE_IDS.length} alineados`);
+        $("sceneNote").textContent = "Los 9 equipos del backend coinciden con el layout de PlantManager.cs.";
+        return true;
+      }
+      if (missing.length) {
+        setChip("sceneMatch", "warn", `${UNITY_SCENE_IDS.length - missing.length}/${UNITY_SCENE_IDS.length} en escena`);
+        $("sceneNote").textContent = `El backend no publica: ${missing.join(", ")}.`;
+        return false;
+      }
+      setChip("sceneMatch", "warn", `${UNITY_SCENE_IDS.length}/${UNITY_SCENE_IDS.length} · ${extras.length} extra`);
+      $("sceneNote").textContent = `IDs fuera del layout fijo de Unity: ${extras.join(", ")}. Amplía MachineLayout en PlantManager.cs para enlazarlos.`;
+      return false;
+    }
+
+    function updateUnityPanel(status, machines, latencyMs) {
+      setLink("linkBackend", "ok", `En línea · ${latencyMs} ms`);
+      $("linkBackendNote").textContent = `FastAPI responde con el mismo origen que consume Unity (${status.status}).`;
+
+      const isHttp = /^https?:$/.test(window.location.protocol);
+      const target = unityLink.target.replace(/\/+$/, "");
+      const origin = window.location.origin.replace(/\/+$/, "");
+      const sameOrigin = isHttp && target === origin;
+      if (!isHttp) {
+        setLink("linkTarget", "warn", "Origen local");
+        $("linkTargetNote").textContent = "Sirve la página desde FastAPI para comparar orígenes.";
+      } else if (sameOrigin) {
+        setLink("linkTarget", "ok", "Mismo backend");
+        $("linkTargetNote").textContent = `${target} · Unity y esta página leen la misma API.`;
+      } else {
+        setLink("linkTarget", "warn", "Origen distinto");
+        $("linkTargetNote").textContent = `Unity consulta ${target}; esta página usa ${origin}.`;
+      }
+
+      updateViewerLink();
+      updateSyncLink(status, machines);
+      const sceneAligned = updateSceneLink(machines);
+
+      const pending = [];
+      if (!sameOrigin) pending.push("origen de Unity");
+      if (!unityLink.viewerAvailable) pending.push("visor WebGL");
+      if (!sceneAligned) pending.push("IDs de escena");
+      setChip(
+        "unityOverall",
+        pending.length ? "warn" : "ok",
+        pending.length ? `Pendiente · ${pending.join(" · ")}` : "Vinculación activa"
+      );
+    }
+
+    function applyUnityLink() {
+      const target = $("unityTarget").value.trim().replace(/\/+$/, "");
+      const viewer = $("unityViewerUrl").value.trim();
+      if (!viewer) {
+        showToast("Indica la ruta del visor WebGL.");
+        return;
+      }
+      unityLink.target = target;
+      unityLink.viewerUrl = viewer;
+      unityLink.loadedUrl = "";
+      try {
+        localStorage.setItem("pet.unityTarget", target);
+        localStorage.setItem("pet.unityViewerUrl", viewer);
+      } catch (error) { /* almacenamiento no disponible */ }
+      probeViewer().then(updateViewerLink);
+      refreshAll();
+      showToast("Enlace de Unity actualizado.");
+    }
+
+    async function refreshAll() {
+      if (refreshing) return;
+      refreshing = true;
+      try {
+        const startedAt = performance.now();
+        const [status, machines, kpis] = await Promise.all([
+          requestJson("/status"), requestJson("/machines"), requestJson("/kpis")
+        ]);
+        const latencyMs = Math.max(0, Math.round(performance.now() - startedAt));
+        updateStatus(status);
+        const machineMetrics = updateKpis(kpis);
+        renderMachines(machines, machineMetrics);
+        updateUnityPanel(status, machines, latencyMs);
+        setConnection(true, "FastAPI conectado");
+        $("lastUpdate").textContent = `Actualizado ${new Date().toLocaleTimeString("es-BO")}`;
+      } catch (error) {
+        setConnection(false, "FastAPI sin conexión");
+        setLink("linkBackend", "bad", "Sin conexión");
+        $("linkBackendNote").textContent = error.message;
+        setChip("unityOverall", "bad", "Backend inaccesible");
+        $("lastUpdate").textContent = error.message;
+      } finally {
+        refreshing = false;
+      }
+    }
+
+    function setInput(id, value) { $(id).value = value ?? ""; }
+    function value(id) { return Number($(id).value); }
+
+    function updateDryerCapacity() {
+      const kg = value("loteEconomico") * value("masaPieza") / 1000;
+      $("dryerCapacity").textContent = Number.isFinite(kg)
+        ? `Capacidad calculada del secador: ${number(kg, 3)} kg por lote`
+        : "Capacidad calculada del secador: —";
+      return kg;
+    }
+
+    function fillForm(config) {
+      activeConfig = JSON.parse(JSON.stringify(config));
+      setInput("demanda", config.demanda);
+      setInput("masaPieza", config.masa_pieza);
+      const massKg = config.unidad_masa_pieza === "kg" ? config.masa_pieza : config.masa_pieza / 1000;
+      setInput("loteEconomico", Math.max(1, Math.floor(config.capacidad_secador / massKg)));
+      setInput("capacidadBuffer", config.capacidad_buffer);
+      setInput("maquinasInyeccion", config.numero_maquinas_inyeccion);
+      setInput("maquinasSoplado", config.numero_maquinas_soplado);
+      setInput("tempSecado", config.material.temperatura_secado_c);
+      setInput("tempFusion", config.material.temperatura_fusion_c);
+      setInput("tiempoSecado", config.tiempo_secado.value);
+      setInput("inyeccionMin", config.tiempo_inyeccion.min);
+      setInput("inyeccionMode", config.tiempo_inyeccion.mode);
+      setInput("inyeccionMax", config.tiempo_inyeccion.max);
+      setInput("enfriamientoMean", config.tiempo_enfriamiento.mean);
+      setInput("enfriamientoStd", config.tiempo_enfriamiento.stddev);
+      setInput("recalentamientoMin", config.tiempo_recalentamiento.min);
+      setInput("recalentamientoMax", config.tiempo_recalentamiento.max);
+      setInput("sopladoMin", config.tiempo_soplado.min);
+      setInput("sopladoMode", config.tiempo_soplado.mode);
+      setInput("sopladoMax", config.tiempo_soplado.max);
+      setInput("tiempoInspeccion", config.tiempo_inspeccion.value);
+      setInput("empaqueMin", config.tiempo_empaque.min);
+      setInput("empaqueMax", config.tiempo_empaque.max);
+      setInput("scrapInyeccion", config.scrap_inyeccion * 100);
+      setInput("scrapSoplado", config.scrap_soplado * 100);
+      setInput("scrapCalidad", config.scrap_calidad * 100);
+      setInput("horasTurno", config.horas_turno);
+      setInput("numeroTurnos", config.numero_turnos);
+      setInput("mtbf", config.MTBF);
+      setInput("mttr", config.MTTR);
+      setInput("randomSeed", config.random_seed);
+      updateDryerCapacity();
+    }
+
+    async function loadConfig() {
+      const config = await requestJson("/config");
+      fillForm(config);
+      setFormMessage("Valores cargados desde la simulación activa.");
+    }
+
+    function validateOrder(minimum, mode, maximum, label) {
+      if (!(minimum <= mode && mode <= maximum)) throw new Error(`${label}: debe cumplirse mínimo ≤ moda ≤ máximo.`);
+    }
+
+    function buildConfig() {
+      if (!activeConfig) throw new Error("La configuración base todavía no está disponible.");
+      const config = JSON.parse(JSON.stringify(activeConfig));
+      validateOrder(value("inyeccionMin"), value("inyeccionMode"), value("inyeccionMax"), "Inyección");
+      validateOrder(value("sopladoMin"), value("sopladoMode"), value("sopladoMax"), "Soplado");
+      if (value("recalentamientoMin") > value("recalentamientoMax")) throw new Error("Recalentamiento: el mínimo no puede superar el máximo.");
+      if (value("empaqueMin") > value("empaqueMax")) throw new Error("Empaque: el mínimo no puede superar el máximo.");
+
+      config.demanda = Math.round(value("demanda"));
+      config.masa_pieza = value("masaPieza");
+      config.unidad_masa_pieza = "grams";
+      config.capacidad_secador = updateDryerCapacity();
+      config.capacidad_buffer = Math.round(value("capacidadBuffer"));
+      config.numero_maquinas_inyeccion = Math.round(value("maquinasInyeccion"));
+      config.numero_maquinas_soplado = Math.round(value("maquinasSoplado"));
+      config.material.temperatura_secado_c = value("tempSecado");
+      config.material.temperatura_fusion_c = value("tempFusion");
+      config.tiempo_secado.value = value("tiempoSecado");
+      config.tiempo_inyeccion.min = value("inyeccionMin");
+      config.tiempo_inyeccion.mode = value("inyeccionMode");
+      config.tiempo_inyeccion.max = value("inyeccionMax");
+      config.tiempo_enfriamiento.mean = value("enfriamientoMean");
+      config.tiempo_enfriamiento.stddev = value("enfriamientoStd");
+      config.tiempo_recalentamiento.min = value("recalentamientoMin");
+      config.tiempo_recalentamiento.max = value("recalentamientoMax");
+      config.tiempo_soplado.min = value("sopladoMin");
+      config.tiempo_soplado.mode = value("sopladoMode");
+      config.tiempo_soplado.max = value("sopladoMax");
+      config.tiempo_inspeccion.value = value("tiempoInspeccion");
+      config.tiempo_empaque.min = value("empaqueMin");
+      config.tiempo_empaque.max = value("empaqueMax");
+      config.scrap_inyeccion = value("scrapInyeccion") / 100;
+      config.scrap_soplado = value("scrapSoplado") / 100;
+      config.scrap_calidad = value("scrapCalidad") / 100;
+      config.horas_turno = value("horasTurno");
+      config.numero_turnos = Math.round(value("numeroTurnos"));
+      config.MTBF = value("mtbf");
+      config.MTTR = value("mttr");
+      config.random_seed = Math.round(value("randomSeed"));
+      return config;
+    }
+
+    async function performAction(action, successMessage) {
+      try {
+        setFormMessage("Procesando…");
+        const response = await requestJson(`/simulation/${action}`, { method: "POST", body: "{}" });
+        setFormMessage(successMessage, "success");
+        showToast(`${successMessage} Estado: ${response.status}.`);
+        await refreshAll();
+      } catch (error) {
+        setFormMessage(error.message, "error");
+      }
+    }
+
+    $("configForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      try {
+        const config = buildConfig();
+        setFormMessage("Aplicando parámetros…");
+        await requestJson("/simulation/reset", { method: "POST", body: "{}" });
+        const response = await requestJson("/simulation/start", { method: "POST", body: JSON.stringify({ config }) });
+        activeConfig = config;
+        throughputHistory = [];
+        setFormMessage("Nueva simulación iniciada correctamente.", "success");
+        showToast(`Simulación ${response.status} con demanda ${config.demanda}.`);
+        await refreshAll();
+      } catch (error) {
+        setFormMessage(error.message, "error");
+      }
+    });
+
+    $("pauseButton").addEventListener("click", () => performAction("pause", "Simulación pausada."));
+    $("resumeButton").addEventListener("click", () => performAction("start", "Simulación reanudada."));
+    $("resetButton").addEventListener("click", () => performAction("reset", "Simulación reiniciada."));
+    $("reloadConfigButton").addEventListener("click", () => loadConfig().catch(error => setFormMessage(error.message, "error")));
+    $("loteEconomico").addEventListener("input", updateDryerCapacity);
+    $("masaPieza").addEventListener("input", updateDryerCapacity);
+
+    // ── Vinculación Unity: enlace, visor embebido y control rápido ──
+    $("unityTarget").value = unityLink.target;
+    $("unityViewerUrl").value = unityLink.viewerUrl;
+    $("unityApply").addEventListener("click", applyUnityLink);
+    $("unityStart").addEventListener("click", () => performAction("start", "Simulación iniciada."));
+    $("unityPause").addEventListener("click", () => performAction("pause", "Simulación pausada."));
+    $("unityReset").addEventListener("click", () => performAction("reset", "Simulación reiniciada."));
+    $("viewerReload").addEventListener("click", () => {
+      unityLink.loadedUrl = "";
+      probeViewer().then(updateViewerLink);
+    });
+    $("viewerOpen").addEventListener("click", () => window.open(unityLink.viewerUrl, "_blank", "noopener"));
+
+    Promise.all([loadConfig(), refreshAll()])
+      .then(() => setConnection(true, "FastAPI conectado"))
+      .catch(error => { setConnection(false, "FastAPI sin conexión"); setFormMessage(error.message, "error"); });
+    setInterval(refreshAll, 750);
+
+    probeViewer().then(updateViewerLink);
+    setInterval(() => { probeViewer().then(updateViewerLink); }, 15000);
+  </script>
+</body>
+</html>

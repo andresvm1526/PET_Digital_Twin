@@ -12,6 +12,11 @@ node_modules/
 dist/
 build/
 
+# Dashboard estatico incluido para ejecutar sin build frontend
+!dashboard/
+!dashboard/dist/
+!dashboard/dist/index.html
+
 # Unity generated files
 unity/**/Library/
 unity/**/Logs/
