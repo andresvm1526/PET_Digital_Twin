@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pet-digital-twin.local/contracts/status.schema.json",
+  "title": "PET Digital Twin API Status",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "simulation_time", "time_unit", "completed_units", "demand"],
+  "properties": {
+    "status": {"enum": ["READY", "RUNNING", "PAUSED", "FINISHED", "STOPPED", "ERROR"]},
+    "simulation_time": {"type": "number", "minimum": 0},
+    "time_unit": {"const": "seconds"},
+    "completed_units": {"type": "integer", "minimum": 0},
+    "demand": {"type": "integer", "minimum": 1}
+  }
+}

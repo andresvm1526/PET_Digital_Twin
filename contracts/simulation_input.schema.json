@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pet-digital-twin.local/contracts/simulation_input.schema.json",
+  "title": "PET Simulation Input",
+  "type": "object",
+  "required": [
+    "material", "demanda", "masa_pieza", "numero_maquinas_inyeccion",
+    "numero_maquinas_soplado", "capacidad_secador", "tiempo_secado",
+    "tiempo_inyeccion", "tiempo_enfriamiento", "tiempo_recalentamiento",
+    "tiempo_soplado", "tiempo_inspeccion", "tiempo_empaque",
+    "scrap_inyeccion", "scrap_soplado", "scrap_calidad", "horas_turno",
+    "numero_turnos", "MTBF", "MTTR", "machine_ids"
+  ],
+  "$defs": {
+    "timeDistribution": {
+      "type": "object",
+      "required": ["distribution", "unit"],
+      "properties": {
+        "distribution": {"enum": ["constant", "normal", "triangular", "uniform"]},
+        "unit": {"enum": ["seconds", "minutes", "hours"]},
+        "value": {"type": "number", "minimum": 0},
+        "mean": {"type": "number", "minimum": 0},
+        "stddev": {"type": "number", "minimum": 0},
+        "min": {"type": "number", "minimum": 0},
+        "mode": {"type": "number", "minimum": 0},
+        "max": {"type": "number", "minimum": 0}
+      },
+      "allOf": [
+        {"if": {"properties": {"distribution": {"const": "constant"}}}, "then": {"required": ["value"]}},
+        {"if": {"properties": {"distribution": {"const": "normal"}}}, "then": {"required": ["mean", "stddev"]}},
+        {"if": {"properties": {"distribution": {"const": "triangular"}}}, "then": {"required": ["min", "mode", "max"]}},
+        {"if": {"properties": {"distribution": {"const": "uniform"}}}, "then": {"required": ["min", "max"]}}
+      ]
+    }
+  },
+  "properties": {
+    "material": {
+      "type": "object",
+      "required": ["nombre"],
+      "properties": {
+        "nombre": {"type": "string"},
+        "grado": {"type": ["string", "null"]},
+        "fuente": {"type": "string"},
+        "densidad_kg_m3": {"type": ["number", "null"]},
+        "temperatura_secado_c": {"type": ["number", "null"]},
+        "temperatura_fusion_c": {"type": ["number", "null"]},
+        "propiedades_granta": {"type": "object"}
+      }
+    },
+    "demanda": {"type": "integer", "minimum": 1},
+    "masa_pieza": {"type": "number", "exclusiveMinimum": 0},
+    "unidad_masa_pieza": {"enum": ["grams", "kg"]},
+    "numero_maquinas_inyeccion": {"type": "integer", "minimum": 1},
+    "numero_maquinas_soplado": {"type": "integer", "minimum": 1},
+    "capacidad_secador": {"type": "number", "exclusiveMinimum": 0},
+    "unidad_capacidad_secador": {"const": "kg"},
+    "capacidad_buffer": {"type": "integer", "minimum": 1},
+    "machine_ids": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["drying", "hopper", "injection", "cooling", "buffer", "reheating", "blow_molding", "quality", "packaging"],
+      "properties": {
+        "drying": {"const": "D-101"},
+        "hopper": {"const": "H-101"},
+        "injection": {"const": "IMM-101"},
+        "cooling": {"const": "CV-101"},
+        "buffer": {"const": "BF-101"},
+        "reheating": {"const": "OV-101"},
+        "blow_molding": {"const": "SBM-101"},
+        "quality": {"const": "QC-101"},
+        "packaging": {"const": "PKG-101"}
+      }
+    },
+    "tiempo_secado": {"$ref": "#/$defs/timeDistribution"},
+    "tiempo_inyeccion": {"$ref": "#/$defs/timeDistribution"},
+    "tiempo_enfriamiento": {"$ref": "#/$defs/timeDistribution"},
+    "tiempo_recalentamiento": {"$ref": "#/$defs/timeDistribution"},
+    "tiempo_soplado": {"$ref": "#/$defs/timeDistribution"},
+    "tiempo_inspeccion": {"$ref": "#/$defs/timeDistribution"},
+    "tiempo_empaque": {"$ref": "#/$defs/timeDistribution"},
+    "scrap_inyeccion": {"type": "number", "minimum": 0, "maximum": 1},
+    "scrap_soplado": {"type": "number", "minimum": 0, "maximum": 1},
+    "scrap_calidad": {"type": "number", "minimum": 0, "maximum": 1},
+    "horas_turno": {"type": "number", "exclusiveMinimum": 0},
+    "numero_turnos": {"type": "integer", "minimum": 1},
+    "MTBF": {"type": "number", "minimum": 0},
+    "MTTR": {"type": "number", "minimum": 0},
+    "random_seed": {"type": "integer"}
+  }
+}

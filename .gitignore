@@ -1,0 +1,26 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.env
+.env.*
+*.egg-info/
+results/*.csv
+results/*.json
+node_modules/
+dist/
+build/
+
+# Unity generated files
+unity/**/Library/
+unity/**/Logs/
+unity/**/Temp/
+unity/**/UserSettings/
+unity/**/Obj/
+unity/**/Build/
+unity/**/Builds/
+unity/**/MemoryCaptures/
+unity/**/*.csproj
+unity/**/*.sln
+unity/**/*.slnx

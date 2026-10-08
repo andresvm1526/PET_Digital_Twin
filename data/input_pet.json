@@ -1,0 +1,80 @@
+{
+  "material": {
+    "nombre": "PET grado botella",
+    "grado": "Bottle grade",
+    "fuente": "manual",
+    "densidad_kg_m3": 1380.0,
+    "temperatura_secado_c": 170.0,
+    "temperatura_fusion_c": 275.0
+  },
+  "demanda": 120,
+  "masa_pieza": 24.0,
+  "unidad_masa_pieza": "grams",
+  "numero_maquinas_inyeccion": 2,
+  "numero_maquinas_soplado": 2,
+  "capacidad_secador": 5.0,
+  "unidad_capacidad_secador": "kg",
+  "capacidad_buffer": 40,
+  "machine_ids": {
+    "drying": "D-101",
+    "hopper": "H-101",
+    "injection": "IMM-101",
+    "cooling": "CV-101",
+    "buffer": "BF-101",
+    "reheating": "OV-101",
+    "blow_molding": "SBM-101",
+    "quality": "QC-101",
+    "packaging": "PKG-101"
+  },
+  "tiempo_secado": {
+    "distribution": "constant",
+    "value": 30,
+    "unit": "minutes"
+  },
+  "tiempo_inyeccion": {
+    "distribution": "triangular",
+    "min": 8,
+    "mode": 10,
+    "max": 13,
+    "unit": "seconds"
+  },
+  "tiempo_enfriamiento": {
+    "distribution": "normal",
+    "mean": 7,
+    "stddev": 0.8,
+    "min": 0.1,
+    "unit": "seconds"
+  },
+  "tiempo_recalentamiento": {
+    "distribution": "uniform",
+    "min": 5,
+    "max": 7,
+    "unit": "seconds"
+  },
+  "tiempo_soplado": {
+    "distribution": "triangular",
+    "min": 3,
+    "mode": 4,
+    "max": 5,
+    "unit": "seconds"
+  },
+  "tiempo_inspeccion": {
+    "distribution": "constant",
+    "value": 2,
+    "unit": "seconds"
+  },
+  "tiempo_empaque": {
+    "distribution": "uniform",
+    "min": 2,
+    "max": 3,
+    "unit": "seconds"
+  },
+  "scrap_inyeccion": 0.02,
+  "scrap_soplado": 0.015,
+  "scrap_calidad": 0.01,
+  "horas_turno": 8,
+  "numero_turnos": 1,
+  "MTBF": 4.0,
+  "MTTR": 0.15,
+  "random_seed": 42
+}

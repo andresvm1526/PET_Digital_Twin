@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pet-digital-twin.local/contracts/kpis.schema.json",
+  "title": "PET Digital Twin KPIs",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "production_total", "good_production", "rejected_units", "scrap_percent",
+    "throughput_units_per_hour", "average_lead_time_seconds",
+    "average_queue_time_seconds", "average_wip_units", "machine_metrics",
+    "rejections_by_stage", "demand", "demand_compliance_percent", "bottleneck",
+    "order_completion_time_seconds", "order_completion_time_hours",
+    "scheduled_time_seconds", "completed_within_scheduled_time", "extensions"
+  ],
+  "properties": {
+    "production_total": {"type": "integer", "minimum": 0},
+    "good_production": {"type": "integer", "minimum": 0},
+    "rejected_units": {"type": "integer", "minimum": 0},
+    "rejections_by_stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["injection", "blow_molding", "quality"],
+      "properties": {
+        "injection": {"type": "integer", "minimum": 0},
+        "blow_molding": {"type": "integer", "minimum": 0},
+        "quality": {"type": "integer", "minimum": 0}
+      }
+    },
+    "scrap_percent": {"type": "number", "minimum": 0, "maximum": 100},
+    "throughput_units_per_hour": {"type": "number", "minimum": 0},
+    "average_lead_time_seconds": {"type": "number", "minimum": 0},
+    "average_queue_time_seconds": {"type": "number", "minimum": 0},
+    "average_wip_units": {"type": "number", "minimum": 0},
+    "machine_metrics": {
+      "type": "object",
+      "propertyNames": {
+        "anyOf": [
+          {"enum": ["D-101", "H-101", "CV-101", "BF-101", "OV-101", "QC-101", "PKG-101"]},
+          {"pattern": "^IMM-[1-9][0-9]{2,}$"},
+          {"pattern": "^SBM-[1-9][0-9]{2,}$"}
+        ]
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["utilization_percent", "availability_percent", "downtime_seconds", "average_queue_length"],
+        "properties": {
+          "utilization_percent": {"type": "number", "minimum": 0, "maximum": 100},
+          "availability_percent": {"type": "number", "minimum": 0, "maximum": 100},
+          "downtime_seconds": {"type": "number", "minimum": 0},
+          "average_queue_length": {"type": "number", "minimum": 0}
+        }
+      }
+    },
+    "demand": {"type": "integer", "minimum": 1},
+    "demand_compliance_percent": {"type": "number", "minimum": 0, "maximum": 100},
+    "bottleneck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["machine_type", "average_utilization_percent", "average_queue_length"],
+      "properties": {
+        "machine_type": {"type": ["string", "null"]},
+        "average_utilization_percent": {"type": "number", "minimum": 0, "maximum": 100},
+        "average_queue_length": {"type": "number", "minimum": 0}
+      }
+    },
+    "order_completion_time_seconds": {"type": "number", "minimum": 0},
+    "order_completion_time_hours": {"type": "number", "minimum": 0},
+    "scheduled_time_seconds": {"type": "number", "minimum": 0},
+    "completed_within_scheduled_time": {"type": "boolean"},
+    "extensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["oee", "energy_consumption_kwh", "cost_per_piece", "co2_emissions_kg"],
+      "properties": {
+        "oee": {"type": ["number", "null"]},
+        "energy_consumption_kwh": {"type": ["number", "null"]},
+        "cost_per_piece": {"type": ["number", "null"]},
+        "co2_emissions_kg": {"type": ["number", "null"]}
+      }
+    }
+  }
+}
